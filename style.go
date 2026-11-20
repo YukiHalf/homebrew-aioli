@@ -114,7 +114,10 @@ func termSize() (int, bool) {
 	return int(ws.Col), true
 }
 
-func isTTY() bool { _, ok := termSize(); return ok }
+func isTTY() bool {
+	st, err := os.Stdout.Stat()
+	return err == nil && st.Mode()&os.ModeCharDevice != 0
+}
 
 // width of the whole layout: the terminal, capped so lines stay readable.
 func layoutWidth() int {

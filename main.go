@@ -157,11 +157,16 @@ type opts struct {
 	open      bool
 }
 
+// everything a view prints lands in buf; main shows it full screen or prints it.
+var buf []string
+
 func printLines(ls []string) {
 	for _, l := range ls {
-		fmt.Println(" " + strings.TrimRight(l, " "))
+		buf = append(buf, " "+strings.TrimRight(l, " "))
 	}
 }
+
+func nl() { buf = append(buf, "") }
 
 // renderPost prints one post: the human original, then every tiny AI's version of it.
 func renderPost(f *Feed, p Post, o opts, w int) {
@@ -195,7 +200,7 @@ func renderPost(f *Feed, p Post, o opts, w int) {
 		printLines(box(body, w, cOat, meta, foot))
 	}
 	if o.humanOnly {
-		fmt.Println()
+		nl()
 		return
 	}
 
@@ -215,11 +220,11 @@ func renderPost(f *Feed, p Post, o opts, w int) {
 	}
 	if len(versions) > 0 {
 		if !o.aiOnly {
-			fmt.Println()
+			nl()
 			printLines([]string{"     " + paint("↓ ", cTangerine) + paint(s.ruinedBy, cMuted, "3") + paint(" ↓", cTangerine)})
 		}
 		printLines([]string{"     " + paint("⚠ "+s.aiWarning, cTomato, "3")})
-		fmt.Println()
+		nl()
 		for _, v := range versions {
 			m := f.model(v.Model)
 			c := moodColor[m.Mood]
@@ -227,7 +232,7 @@ func renderPost(f *Feed, p Post, o opts, w int) {
 			foot := dim(s.writtenAs + " " + f.persona(v.Persona, o.lang))
 			b := bubble(renderMarkdown(v.Body, w-artW-4, ""), w-artW, c, head, foot)
 			printLines(sideBySide(garlic(m.Mood), artW, b))
-			fmt.Println()
+			nl()
 		}
 	}
 	if p.URL != "" {
@@ -241,7 +246,7 @@ func renderPost(f *Feed, p Post, o opts, w int) {
 			openURL(u)
 		}
 	}
-	fmt.Println()
+	nl()
 }
 
 func gabTeaser(f *Feed, lang string, w int) {
@@ -249,7 +254,7 @@ func gabTeaser(f *Feed, lang string, w int) {
 		if m.Status == "soon" {
 			b := bubble(wrapWords(inline(dict[lang].gabTeaser, "", "3"), w-artW-4), w-artW, moodColor[m.Mood], bold(m.Label, moodColor[m.Mood])+dim(" · soon"), "")
 			printLines(sideBySide(garlic(m.Mood), artW, b))
-			fmt.Println()
+			nl()
 		}
 	}
 }
@@ -262,7 +267,7 @@ func rule(label string, w int) {
 		right = 3
 	}
 	printLines([]string{paint(strings.Repeat("~", left), cMeadow) + paint(l, cPeach, "1") + paint(strings.Repeat("~", right), cMeadow)})
-	fmt.Println()
+	nl()
 }
 
 func viewDay(f *Feed, day string, o opts, w int, fallback bool) {
@@ -276,7 +281,7 @@ func viewDay(f *Feed, day string, o opts, w int, fallback bool) {
 	if len(hits) == 0 {
 		b := bubble(wrapWords(inline(dict[o.lang].nothingToday, "", "3"), w-artW-4), w-artW, cPeriwinkle, "", "")
 		printLines(sideBySide(garlic("meh"), artW, b))
-		fmt.Println()
+		nl()
 		if fallback && len(f.Posts) > 0 {
 			rule(dict[o.lang].latestInstead, w)
 			renderPost(f, f.Posts[0], o, w)
@@ -323,16 +328,16 @@ func viewList(f *Feed, o opts, w int) {
 		row := pad(paint(date, cPeach), 12) + pad(paint(ts, cOat, "1"), titleW+1) + pad(dim(strings.Join(langs, "+")), 7) + paint(fmt.Sprintf("🧄×%d", ai), cMustard)
 		printLines([]string{row, "            " + dim(p.Slug)})
 	}
-	fmt.Println()
+	nl()
 	printLines([]string{dim(dict[o.lang].listHint)})
-	fmt.Println()
+	nl()
 }
 
 func viewHallOfFame(f *Feed, o opts, w int) {
 	s := dict[o.lang]
 	rule("hall of fame", w)
 	printLines([]string{center(paint(s.hofIntro, cOat, "3"), w)})
-	fmt.Println()
+	nl()
 	titles := map[string]string{}
 	for _, p := range f.Posts {
 		for l, t := range p.Human {
@@ -353,7 +358,7 @@ func viewHallOfFame(f *Feed, o opts, w int) {
 		}
 		foot := dim(s.from + ": " + title)
 		printLines(sideBySide(garlic(m.Mood), artW, bubble(body, w-artW, c, bold(m.Label, c)+dim(" · "+m.Name), foot)))
-		fmt.Println()
+		nl()
 	}
 }
 
@@ -389,7 +394,7 @@ func find(f *Feed, q string) (Post, bool) {
 
 const help = `aioli: daily lab notes from Independence Lab, ruined by tiny AIs.
 
-usage
+usage   (opens full screen; scroll with ↑↓ / j k / space / mouse, q quits)
   aioli                     today's posts (or the latest, if the lab slept)
   aioli --today             only today's posts
   aioli --yesterday         yesterday's posts
@@ -405,6 +410,8 @@ options
   --human                   only the human original
   --ai                      only the AI versions
   --open                    also open the post in the browser
+  --print                   print and exit instead of the full-screen view
+                            (automatic when piped)
   --no-color, --color       force colours off / on
   --version
 
@@ -415,7 +422,7 @@ func main() {
 	args := os.Args[1:]
 	o := opts{lang: defaultLang()}
 	mode, query, date := "auto", "", ""
-	noColor, forceColor := false, false
+	noColor, forceColor, noPager := false, false, false
 
 	need := func(i int, name string) string {
 		if i+1 >= len(args) {
@@ -464,6 +471,8 @@ func main() {
 			o.aiOnly = true
 		case "-o", "--open":
 			o.open = true
+		case "-p", "--print", "--no-pager":
+			noPager = true
 		case "--no-color":
 			noColor = true
 		case "--color":
@@ -481,48 +490,70 @@ func main() {
 	}
 
 	setupColor(forceColor, noColor)
-	w := layoutWidth()
 
 	f, stale, err := loadFeed()
 	if err != nil {
 		fail("couldn't reach the lab: %v", err)
 	}
 
-	printLines(banner(w, o.lang))
-	if stale {
-		when := ""
-		if st, err := os.Stat(cachePath()); err == nil {
-			when = st.ModTime().Format("2006-01-02 15:04")
-		}
-		printLines([]string{paint(fmt.Sprintf(dict[o.lang].offline, when), cTomato), ""})
-	}
-
+	// pick what to show (errors out before anything is drawn)
 	today := time.Now().Format("2006-01-02")
+	var view func(w int)
+	title := ""
 	switch mode {
-	case "auto":
-		viewDay(f, today, o, w, true)
-	case "today":
-		viewDay(f, today, o, w, false)
+	case "auto", "today":
+		title = fmtDate(today, o.lang)
+		view = func(w int) { viewDay(f, today, o, w, mode == "auto") }
 	case "date":
 		if _, err := time.Parse("2006-01-02", date); err != nil {
 			fail("dates look like 2026-11-12")
 		}
-		viewDay(f, date, o, w, false)
-	case "latest":
+		title = fmtDate(date, o.lang)
+		view = func(w int) { viewDay(f, date, o, w, false) }
+	case "latest", "read":
 		if len(f.Posts) == 0 {
 			fail("no posts yet")
 		}
-		renderPost(f, f.Posts[0], o, w)
-	case "list":
-		viewList(f, o, w)
-	case "hof":
-		viewHallOfFame(f, o, w)
-	case "read":
-		p, ok := find(f, query)
-		if !ok {
-			fail(dict[o.lang].noMatch, query)
+		p := f.Posts[0]
+		if mode == "read" {
+			var ok bool
+			if p, ok = find(f, query); !ok {
+				fail(dict[o.lang].noMatch, query)
+			}
 		}
-		renderPost(f, p, o, w)
+		title = fmtDate(p.Date, o.lang)
+		view = func(w int) { renderPost(f, p, o, w) }
+	case "list":
+		title = "posts"
+		view = func(w int) { viewList(f, o, w) }
+	case "hof":
+		title = "hall of fame"
+		view = func(w int) { viewHallOfFame(f, o, w) }
+	}
+
+	render := func(w int) []string {
+		buf = nil
+		printLines(banner(w, o.lang))
+		if stale {
+			when := ""
+			if st, err := os.Stat(cachePath()); err == nil {
+				when = st.ModTime().Format("2006-01-02 15:04")
+			}
+			printLines([]string{paint(fmt.Sprintf(dict[o.lang].offline, when), cTomato), ""})
+		}
+		view(w)
+		for len(buf) > 0 && buf[len(buf)-1] == "" {
+			buf = buf[:len(buf)-1]
+		}
+		return buf
+	}
+
+	if isTTY() && !noPager {
+		page(render, title)
+		return
+	}
+	for _, l := range render(layoutWidth()) {
+		fmt.Println(l)
 	}
 }
 
