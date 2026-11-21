@@ -263,8 +263,25 @@ func page(st *state) {
 				case kBottom:
 					top = len(lines)
 				default:
-					if st.onKey(k) {
-						layout()
+				}
+				if swallow, done := st.konamiStep(k); done {
+					st.laugh = true
+					layout()
+					top = 0
+					continue
+				} else if swallow {
+					continue
+				}
+				switch k {
+				case kQuit, kUp, kDown, kWheelUp, kWheelDown, kPageUp, kPageDown, kTop, kBottom:
+					continue
+				}
+				if st.onKey(k) {
+					markovLine = -1
+					layout()
+					if k == 'd' && markovLine >= 0 {
+						top = markovLine - 2
+					} else {
 						// land on the content, not the hero, once you're navigating
 						top = heroRows(st, rows)
 					}

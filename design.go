@@ -131,6 +131,32 @@ func hero(st *state, w int, rows int) []string {
 	ry := float64(rows-14) / 2.3
 	ry = math.Max(5, math.Min(10, ry))
 	g := garlicCells(ry)
+	laughRow := -1
+	if st.laugh {
+		// the site's laugh: the garlic splits at its mouth and the top half hinges open
+		split := int(math.Round(float64(len(g))/2 - 0.5 + 0.62*ry - 0.5))
+		blank := make([]gcell, len(g[0]))
+		for i := range blank {
+			blank[i] = gcell{' ', ""}
+		}
+		top := g[:split]
+		// tilt the top half: each row further up shifts a little more to the left
+		tilted := make([][]gcell, len(top))
+		for i, row := range top {
+			shift := (len(top) - i) / 3
+			nr := make([]gcell, len(row))
+			for c := range nr {
+				if c+shift < len(row) {
+					nr[c] = row[c+shift]
+				} else {
+					nr[c] = gcell{' ', ""}
+				}
+			}
+			tilted[i] = nr
+		}
+		g = append(append(append([][]gcell{}, tilted...), blank, blank), g[split:]...)
+		laughRow = split
+	}
 	R, C := len(g), len(g[0])
 
 	H := R + 2
@@ -188,6 +214,15 @@ func hero(st *state, w int, rows int) []string {
 		for c, cell := range row {
 			if cell.ch != ' ' {
 				canvas[gy+r][gx+c] = paint(string(cell.ch), toneColor[cell.tone])
+			}
+		}
+	}
+	if laughRow >= 0 {
+		ha := "A H A H A H A H A"
+		x0 := gx + (C-len(ha))/2
+		for i, ch := range ha {
+			if ch != ' ' {
+				canvas[gy+laughRow][x0+i] = bold(string(ch), cTangerine)
 			}
 		}
 	}

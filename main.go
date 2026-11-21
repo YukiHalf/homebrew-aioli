@@ -123,6 +123,11 @@ type state struct {
 	post     int  // index into f.Posts (post mode, and where ← → start from)
 	isToday  bool
 	o        opts
+
+	dumber    int   // easter egg: how many times d was pressed on this post
+	seed      int64 // its dice
+	laugh     bool  // easter egg: the garlic is laughing (Konami code)
+	konamiPos int
 }
 
 func (st *state) command() string {
@@ -181,6 +186,9 @@ func (st *state) render(w, rows int) []string {
 		viewDay(st, w)
 	case "post":
 		renderPost(st, st.post, w)
+		if st.dumber > 0 {
+			renderDumber(st, w)
+		}
 	case "list":
 		viewList(st, w)
 	case "hof":
@@ -417,10 +425,38 @@ func find(f *Feed, q string) (int, bool) {
 	return 0, false
 }
 
+// currentPost: the post on screen (the first one, on a day with several).
+func (st *state) currentPost() int {
+	if st.mode == "today" || st.mode == "day" {
+		for i, p := range st.f.Posts {
+			if p.Date == st.date {
+				return i
+			}
+		}
+		return 0
+	}
+	if st.mode == "post" {
+		return st.post
+	}
+	return 0
+}
+
 // onKey: the nav. Returns whether the page has to be rendered again from the top.
 func (st *state) onKey(k int) bool {
 	n := len(st.f.Posts)
+	st.laugh = false
+	if k != 'd' {
+		st.dumber = 0
+	}
 	switch k {
+	case 'd':
+		if n == 0 {
+			return false
+		}
+		st.post = st.currentPost()
+		st.mode = "post"
+		st.dumber++
+		st.seed = newSeed()
 	case kRight, ']', '>': // older
 		if n == 0 {
 			return false
@@ -529,6 +565,9 @@ func main() {
 			args = append(args[:i+1], append([]string{v}, args[i+1:]...)...)
 		}
 		switch a {
+		case "sudo":
+			sudo(st.lang)
+			return
 		case "-h", "--help", "help":
 			fmt.Print(help)
 			return
@@ -560,6 +599,16 @@ func main() {
 		case "-m", "--model":
 			st.o.model = need(i, a)
 			i++
+		case "--dumber": // easter egg, not in --help
+			n, err := strconv.Atoi(need(i, a))
+			i++
+			if err != nil || n < 1 {
+				fail("--dumber wants a number from 1")
+			}
+			st.dumber, st.seed = n, newSeed()
+			if st.mode == "today" {
+				st.mode = "post"
+			}
 		case "--human":
 			st.o.humanOnly = true
 		case "--ai":
