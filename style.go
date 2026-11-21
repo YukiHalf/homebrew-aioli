@@ -43,6 +43,7 @@ var moodColor = map[string]string{
 type palette struct {
 	on        bool
 	truecolor bool
+	bg        string // page background (full-screen view), "" = the terminal's own
 }
 
 var pal palette
@@ -72,6 +73,33 @@ func to256(r, g, b int) int {
 	return 16 + 36*q(r) + 6*q(g) + q(b)
 }
 
+func bgCode(hex string) string {
+	r, g, b := rgb(hex)
+	if pal.truecolor {
+		return fmt.Sprintf("48;2;%d;%d;%d", r, g, b)
+	}
+	return fmt.Sprintf("48;5;%d", to256(r, g, b))
+}
+
+// bgOn is the sequence that puts the page background back.
+func bgOn() string {
+	if !pal.on {
+		return ""
+	}
+	if pal.bg == "" {
+		return esc + "49m"
+	}
+	return esc + bgCode(pal.bg) + "m"
+}
+
+// chip: text on a coloured block, like the site's stickers.
+func chip(s, fg, bg string) string {
+	if !pal.on {
+		return s
+	}
+	return esc + "1;" + fgCode(fg) + ";" + bgCode(bg) + "m" + s + esc + "22;39m" + bgOn()
+}
+
 func fgCode(hex string) string {
 	r, g, b := rgb(hex)
 	if pal.truecolor {
@@ -94,7 +122,8 @@ func paint(s, hex string, attrs ...string) string {
 	if len(codes) == 0 {
 		return s
 	}
-	return esc + strings.Join(codes, ";") + "m" + s + esc + "0m"
+	// reset only what we set, so the page background stays
+	return esc + strings.Join(codes, ";") + "m" + s + esc + "22;23;24;39m"
 }
 
 func bold(s, hex string) string   { return paint(s, hex, "1") }
@@ -129,11 +158,12 @@ func layoutWidth() int {
 			w = 80
 		}
 	}
-	if w > 84 {
-		w = 84
+	w -= 2
+	if w > 90 {
+		w = 90
 	}
-	if w < 44 {
-		w = 44
+	if w < 56 {
+		w = 56
 	}
 	return w
 }

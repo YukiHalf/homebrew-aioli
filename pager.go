@@ -30,11 +30,8 @@ func stty(args ...string) (string, error) {
 	return strings.TrimSpace(string(out)), err
 }
 
-type key int
-
 const (
-	kNone key = iota
-	kQuit
+	kQuit = -1 - iota
 	kUp
 	kDown
 	kPageUp
@@ -43,11 +40,13 @@ const (
 	kBottom
 	kWheelUp
 	kWheelDown
+	kLeft
+	kRight
 )
 
 type seq struct {
 	seq string
-	k   key
+	k   int
 }
 
 var seqs = []seq{
@@ -55,6 +54,7 @@ var seqs = []seq{
 	{"\x1b[5~", kPageUp}, {"\x1b[6~", kPageDown},
 	{"\x1b[H", kTop}, {"\x1b[1~", kTop}, {"\x1bOH", kTop},
 	{"\x1b[F", kBottom}, {"\x1b[4~", kBottom}, {"\x1bOF", kBottom},
+	{"\x1b[D", kLeft}, {"\x1bOD", kLeft}, {"\x1b[C", kRight}, {"\x1bOC", kRight},
 }
 
 func seqKey(s string) *seq {
@@ -67,8 +67,8 @@ func seqKey(s string) *seq {
 }
 
 // parseKeys turns a chunk of terminal input into keys.
-func parseKeys(b []byte) []key {
-	var keys []key
+func parseKeys(b []byte) []int {
+	var keys []int
 	for i := 0; i < len(b); {
 		rest := string(b[i:])
 		switch {
@@ -105,7 +105,7 @@ func parseKeys(b []byte) []key {
 				keys = append(keys, kUp)
 			case 'j', '\r', '\n':
 				keys = append(keys, kDown)
-			case ' ', 'f', 6:
+			case ' ', 6:
 				keys = append(keys, kPageDown)
 			case 'b', 2:
 				keys = append(keys, kPageUp)
@@ -113,6 +113,10 @@ func parseKeys(b []byte) []key {
 				keys = append(keys, kTop)
 			case 'G':
 				keys = append(keys, kBottom)
+			default:
+				if b[i] >= 0x20 && b[i] < 0x7f {
+					keys = append(keys, int(b[i]))
+				}
 			}
 			i++
 		}
@@ -120,20 +124,22 @@ func parseKeys(b []byte) []key {
 	return keys
 }
 
-// page shows render(width) full screen until the reader quits.
-func page(render func(w int) []string, title string) {
+// page shows the state full screen until the reader quits; nav keys change the state and re-render.
+func page(st *state) {
 	saved, err := stty("-g")
 	if err != nil {
-		// no controllable terminal: just print
-		for _, l := range render(layoutWidth()) {
+		for _, l := range st.render(layoutWidth(), 40) {
 			fmt.Println(l)
 		}
 		return
 	}
 	_, _ = stty("raw", "-echo")
 	out := os.Stdout
+	if pal.on {
+		pal.bg = cSpace
+	}
 	restore := func() {
-		fmt.Fprint(out, "\x1b[?1006l\x1b[?1000l\x1b[?25h\x1b[?1049l")
+		fmt.Fprint(out, "\x1b[0m\x1b[?1006l\x1b[?1000l\x1b[?25h\x1b[?1049l")
 		_, _ = stty(saved)
 	}
 	fmt.Fprint(out, "\x1b[?1049h\x1b[?25l\x1b[?1000h\x1b[?1006h")
@@ -164,8 +170,8 @@ func page(render func(w int) []string, title string) {
 		}
 		rows, cols = r, c
 		w := layoutWidth()
-		lines = render(w)
-		margin = (cols - w - 1) / 2
+		lines = st.render(w, rows)
+		margin = (cols - w) / 2
 		if margin < 0 {
 			margin = 0
 		}
@@ -182,15 +188,13 @@ func page(render func(w int) []string, title string) {
 	draw := func() {
 		clamp()
 		var b strings.Builder
-		b.WriteString("\x1b[H")
 		left := strings.Repeat(" ", margin)
 		for r := 0; r < view(); r++ {
-			b.WriteString("\x1b[" + strconv.Itoa(r+1) + ";1H\x1b[2K")
+			b.WriteString("\x1b[" + strconv.Itoa(r+1) + ";1H" + bgOn() + "\x1b[2K")
 			if i := top + r; i < len(lines) {
 				b.WriteString(left + lines[i])
 			}
 		}
-		// status bar
 		pct := "all"
 		if len(lines) > view() {
 			pct = strconv.Itoa((top+view())*100/len(lines)) + "%"
@@ -200,11 +204,11 @@ func page(render func(w int) []string, title string) {
 				pct = "end"
 			}
 		}
-		help := "↑↓ jk scroll · space page · g/G top/end · q quit"
-		leftS := " 🧄 aioli · " + title
+		help := st.status()
+		leftS := " aioli · " + st.title()
 		gap := cols - vw(leftS) - vw(help) - vw(pct) - 4
 		if gap < 1 {
-			help = "q quit"
+			help = st.statusShort()
 			gap = cols - vw(leftS) - vw(help) - vw(pct) - 4
 		}
 		if gap < 1 {
@@ -213,7 +217,7 @@ func page(render func(w int) []string, title string) {
 		bar := leftS + strings.Repeat(" ", gap) + help + "   " + pct + " "
 		b.WriteString("\x1b[" + strconv.Itoa(rows) + ";1H\x1b[2K")
 		if pal.on {
-			b.WriteString(esc + "7;" + fgCode(cOat) + "m" + bar + esc + "0m")
+			b.WriteString(esc + fgCode(cSpace) + ";" + bgCode(cLime) + "m" + bar + esc + "39m" + bgOn())
 		} else {
 			b.WriteString(bar)
 		}
@@ -258,9 +262,20 @@ func page(render func(w int) []string, title string) {
 					top = 0
 				case kBottom:
 					top = len(lines)
+				default:
+					if st.onKey(k) {
+						layout()
+						// land on the content, not the hero, once you're navigating
+						top = heroRows(st, rows)
+					}
 				}
 			}
 			draw()
 		}
 	}
+}
+
+// heroRows: how many lines the hero takes, so navigation can scroll straight past it.
+func heroRows(st *state, rows int) int {
+	return len(hero(st, layoutWidth(), rows))
 }
