@@ -32,7 +32,7 @@ class Aioli < Formula
 
   def install
     if build.head?
-      system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=HEAD")
+      system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=HEAD"), "./cmd/aioli"
     else
       bin.install "aioli"
     end

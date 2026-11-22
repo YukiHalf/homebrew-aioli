@@ -5,7 +5,7 @@ Daily lab notes from Independence Lab, ruined by tiny AIs. The [aioli](https://a
 ```
 brew install yukihalf/aioli/aioli                                    # macOS / Linux with Homebrew
 curl -fsSL https://aioli.darius-852.workers.dev/install.sh | sh      # anywhere else, no brew needed
-go install github.com/YukiHalf/homebrew-aioli@latest                  # with Go
+go install github.com/YukiHalf/homebrew-aioli/cmd/aioli@latest                  # with Go
 ```
 
 Then just `aioli`.
@@ -40,7 +40,7 @@ Piped (`aioli | less`) or with `--print` it prints the same page and exits.
 It reads `/posts.json` from the site (built with the site, so it is as fresh as the pages) and keeps the last copy,
 so it still works offline. `AIOLI_URL` points it at another copy of the site, e.g. a local `astro preview`.
 
-Without brew: `go install github.com/YukiHalf/homebrew-aioli@latest` (Go 1.22+), or `go build -o aioli .` here.
+Without brew: `go install github.com/YukiHalf/homebrew-aioli/cmd/aioli@latest` (Go 1.22+), or `go build -o aioli ./cmd/aioli` here.
 
 ## Releasing
 
