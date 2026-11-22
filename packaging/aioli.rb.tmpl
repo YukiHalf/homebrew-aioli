@@ -1,0 +1,44 @@
+class Aioli < Formula
+  desc "Daily lab notes from Independence Lab, ruined by tiny AIs, in your terminal"
+  homepage "https://aioli.darius-852.workers.dev"
+  version "@VERSION@"
+  head "https://github.com/YukiHalf/homebrew-aioli.git", branch: "main"
+
+  base = "https://github.com/YukiHalf/homebrew-aioli/releases/download/v@VERSION@/aioli_@VERSION@"
+  on_macos do
+    on_arm do
+      url "#{base}_darwin_arm64.tar.gz"
+      sha256 "@DARWIN_ARM64@"
+    end
+    on_intel do
+      url "#{base}_darwin_amd64.tar.gz"
+      sha256 "@DARWIN_AMD64@"
+    end
+  end
+  on_linux do
+    on_arm do
+      url "#{base}_linux_arm64.tar.gz"
+      sha256 "@LINUX_ARM64@"
+    end
+    on_intel do
+      url "#{base}_linux_amd64.tar.gz"
+      sha256 "@LINUX_AMD64@"
+    end
+  end
+
+  head do
+    depends_on "go" => :build
+  end
+
+  def install
+    if build.head?
+      system "go", "build", *std_go_args(ldflags: "-s -w -X main.version=HEAD")
+    else
+      bin.install "aioli"
+    end
+  end
+
+  test do
+    assert_match "aioli", shell_output("#{bin}/aioli --version")
+  end
+end

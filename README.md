@@ -3,9 +3,12 @@
 Daily lab notes from Independence Lab, ruined by tiny AIs. The [aioli](https://aioli.darius-852.workers.dev) blog, in a terminal.
 
 ```
-brew install yukihalf/aioli/aioli
-aioli --today
+brew install yukihalf/aioli/aioli                                    # macOS / Linux with Homebrew
+curl -fsSL https://aioli.darius-852.workers.dev/install.sh | sh      # anywhere else, no brew needed
+go install github.com/YukiHalf/homebrew-aioli@latest                  # with Go
 ```
+
+Then just `aioli`.
 
 ```
 aioli                     today's posts (or the latest, if the lab slept)
@@ -42,8 +45,8 @@ Without brew: `go install github.com/YukiHalf/homebrew-aioli@latest` (Go 1.22+),
 ## Releasing
 
 ```
-git tag v0.2.0 && git push --tags
-curl -sL https://github.com/YukiHalf/homebrew-aioli/archive/refs/tags/v0.2.0.tar.gz | shasum -a 256
+git tag v0.2.0 && git push origin v0.2.0
 ```
 
-Put the new tag and checksum into `Formula/aioli.rb`, commit, push. `brew upgrade aioli` picks it up.
+The release workflow builds macOS + Linux binaries (arm64 and amd64), publishes them as a GitHub release with
+checksums, and rewrites `Formula/aioli.rb` to point at them. `brew upgrade aioli` and the install script pick it up.
