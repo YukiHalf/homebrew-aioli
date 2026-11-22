@@ -1,28 +1,28 @@
 class Aioli < Formula
   desc "Daily lab notes from Independence Lab, ruined by tiny AIs, in your terminal"
   homepage "https://aioli.darius-852.workers.dev"
-  version "0.1.0"
+  version "0.1.1"
   head "https://github.com/YukiHalf/homebrew-aioli.git", branch: "main"
 
-  base = "https://github.com/YukiHalf/homebrew-aioli/releases/download/v0.1.0/aioli_0.1.0"
+  base = "https://github.com/YukiHalf/homebrew-aioli/releases/download/v0.1.1/aioli_0.1.1"
   on_macos do
     on_arm do
       url "#{base}_darwin_arm64.tar.gz"
-      sha256 "ff6fc65d1739ed75457e27413b31b357a3b166dc8ead99f9422c72f98422c77b"
+      sha256 "7b1208fd81c91dd17f7df79b36b32765e4cf51295ead9d0abb6755ba2381041a"
     end
     on_intel do
       url "#{base}_darwin_amd64.tar.gz"
-      sha256 "7e5f25cc337aa7a4c50120c6c61baa1a7169510f49b81e29ea3ef1b1cc637f2d"
+      sha256 "de408d2fea8d2b55a0075812df03fee6fd5f2b86febce635c4f1ecbed0687955"
     end
   end
   on_linux do
     on_arm do
       url "#{base}_linux_arm64.tar.gz"
-      sha256 "39c851b797ad6539e7b45e1d5ac763cf3194319231a0005537f9ffedca92711e"
+      sha256 "ec0489f2864630310e8ae52305dcb3bc4045724f7b1534967e416ad5d1c9213f"
     end
     on_intel do
       url "#{base}_linux_amd64.tar.gz"
-      sha256 "93fc8e0a73ddacd87a1883acfe8cf36a4d0d7f031e5ad745bda0a8e1f029aba0"
+      sha256 "d4142bd97cf1aa30d61a4ae323f978c2bcd9ec2102e1adb85d8085973cdf6e3d"
     end
   end
 
