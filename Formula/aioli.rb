@@ -2,7 +2,10 @@ class Aioli < Formula
   desc "Daily lab notes from Independence Lab, ruined by tiny AIs, in your terminal"
   homepage "https://aioli.darius-852.workers.dev"
   license "MIT"
-  head "https://github.com/YukiHalf/homebrew-aioli.git", branch: "main"
+  head do
+    url "https://github.com/YukiHalf/homebrew-aioli.git", branch: "main"
+    depends_on "go" => :build
+  end
 
   base = "https://github.com/YukiHalf/homebrew-aioli/releases/download/v0.1.2/aioli_0.1.2"
   on_macos do
@@ -24,10 +27,6 @@ class Aioli < Formula
       url "#{base}_linux_amd64.tar.gz"
       sha256 "efbecd025d036865d47efeee2103db5569da38a0489e2aac9b5b00b14beeab78"
     end
-  end
-
-  head do
-    depends_on "go" => :build
   end
 
   def install
