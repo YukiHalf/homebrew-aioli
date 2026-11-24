@@ -4,11 +4,17 @@ Daily lab notes from Independence Lab, ruined by tiny AIs. The [aioli](https://a
 
 ```
 brew install yukihalf/aioli/aioli                                    # macOS / Linux with Homebrew
-curl -fsSL https://aioli.darius-852.workers.dev/install.sh | sh      # anywhere else, no brew needed
+curl -fsSL https://aioli.darius-852.workers.dev/install.sh | sh      # anywhere else, no brew, no root
+wget -qO-  https://aioli.darius-852.workers.dev/install.sh | sh      # same, on machines without curl
 go install github.com/YukiHalf/homebrew-aioli/cmd/aioli@latest                  # with Go
 ```
 
 Then just `aioli`.
+
+The install script needs no root. It puts the binary in `~/.local/bin` (or `AIOLI_BIN=/some/dir`) and adds that
+folder to your PATH in `~/.bashrc` / `~/.zshrc` / fish / `~/.profile` (skip with `AIOLI_NO_MODIFY_PATH=1`).
+`AIOLI_VERSION=v0.1.1` pins a version. Run it again to update. To uninstall: `rm ~/.local/bin/aioli` and delete the
+`# added by aioli` line from your shell rc.
 
 ```
 aioli                     today's posts (or the latest, if the lab slept)
@@ -50,3 +56,7 @@ git tag v0.2.0 && git push origin v0.2.0
 
 The release workflow builds macOS + Linux binaries (arm64 and amd64), publishes them as a GitHub release with
 checksums, and rewrites `Formula/aioli.rb` to point at them. `brew upgrade aioli` and the install script pick it up.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

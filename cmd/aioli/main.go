@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -572,7 +573,7 @@ func main() {
 			fmt.Print(help)
 			return
 		case "-v", "--version", "version":
-			fmt.Println("aioli", version)
+			fmt.Println("aioli", buildVersion())
 			return
 		case "-t", "--today", "today":
 			st.mode, st.fallback = "today", false
@@ -666,6 +667,16 @@ func main() {
 	for _, l := range st.render(layoutWidth(), rows) {
 		fmt.Println(strings.TrimRight(l, " "))
 	}
+}
+
+// buildVersion: the release sets version; a go install of a tag still knows which tag it built.
+func buildVersion() string {
+	if version == "dev" {
+		if bi, ok := debug.ReadBuildInfo(); ok && strings.HasPrefix(bi.Main.Version, "v") {
+			return strings.TrimPrefix(bi.Main.Version, "v")
+		}
+	}
+	return version
 }
 
 func defaultLang() string {

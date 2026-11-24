@@ -129,7 +129,7 @@ func fetch(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "aioli-cli/"+version)
+	req.Header.Set("User-Agent", "aioli-cli/"+buildVersion())
 	res, err := client.Do(req)
 	if err != nil {
 		return nil, err

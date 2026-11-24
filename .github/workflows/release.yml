@@ -21,7 +21,7 @@ jobs:
             os=${t%/*}; arch=${t#*/}; d=aioli_${V}_${os}_${arch}
             mkdir -p "dist/$d"
             CGO_ENABLED=0 GOOS=$os GOARCH=$arch go build -trimpath -ldflags "-s -w -X main.version=$V" -o "dist/$d/aioli" ./cmd/aioli
-            cp README.md "dist/$d/"
+            cp README.md LICENSE "dist/$d/"
             tar -C dist -czf "dist/$d.tar.gz" "$d"
           done
           (cd dist && shasum -a 256 *.tar.gz > checksums.txt && cat checksums.txt)

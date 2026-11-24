@@ -1,7 +1,7 @@
 class Aioli < Formula
   desc "Daily lab notes from Independence Lab, ruined by tiny AIs, in your terminal"
   homepage "https://aioli.darius-852.workers.dev"
-  version "0.1.1"
+  license "MIT"
   head "https://github.com/YukiHalf/homebrew-aioli.git", branch: "main"
 
   base = "https://github.com/YukiHalf/homebrew-aioli/releases/download/v0.1.1/aioli_0.1.1"
